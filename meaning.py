@@ -5,10 +5,6 @@ import requests
 import re
 import os
 
-TAVILY_API_KEY = "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"
-GEMINI_API_KEY = "AIzaSyBsrayPpOLYH6SMM8pXVUp2olUCfcW2AFk"
-
-
 
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-2.5-flash")
