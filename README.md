@@ -1,56 +1,211 @@
-# Arabic Lexical Analysis Agent (Synonyms / Antonyms / Plurals)
+# arabic-lexical-analysis-agent
 
-## Project Description
-This project provides an **Arabic lexical analysis microservice** that returns **synonyms, antonyms, and plural forms** for a given Arabic word.  
-It combines a **local SQLite dictionary** for instant lookups with a **fallback pipeline** that uses **Tavily web search** to build context and **Google Gemini** to generate a clean, single-word answer when the word isn’t found locally. The service is exposed via **FastAPI**. :contentReference[oaicite:0]{index=0} :contentReference[oaicite:1]{index=1}
+**Arabic Lexical Analysis Agent — Synonyms / Antonyms / Plurals**
 
 ---
 
-## Dataset
-The service ships with a local **SQLite** database `data.db` that stores three tables: `synonyms`, `antonyms`, and `plural`.  
-Each table maps a **WORD** to its target value(s). When a local entry exists, it’s returned immediately; otherwise, the service performs a web-assisted generation. :contentReference[oaicite:2]{index=2}
+## 📘 Project Description
 
-### Key Columns
-- **WORD**: Arabic lemma (lookup key). :contentReference[oaicite:3]{index=3}  
-- **SYNO_SET / ANTO_SET / PLURAL**: Stored results for synonyms, antonyms, and plural (semicolon-separated if multiple). :contentReference[oaicite:4]{index=4}
+This repository provides an **Arabic lexical analysis microservice** that returns **synonyms**, **antonyms**, and **plural forms** for a given Arabic word.
 
-> **Provenance**: Source dictionary content was originally collected from GitHub resources (add your specific link here).
+It uses a **local SQLite database (`data.db`)** for instant lookups and offers an **optional fallback** (search + LLM) when an entry is missing. The service is built with **FastAPI** and is easy to integrate with web or mobile applications.
 
 ---
 
-## Objectives
-1. Provide low-latency lexical lookups from a local database. :contentReference[oaicite:5]{index=5}  
-2. Fallback to **Tavily + Gemini** with prompt constraints to return **one precise word** when no local entry exists. :contentReference[oaicite:6]{index=6}  
-3. Expose a simple, robust **REST API** for integration with web/mobile apps. :contentReference[oaicite:7]{index=7}
+## 📚 Dataset
+
+The service uses a local SQLite database file: `data.db`.
+
+- **Source**: [ArabicLT by mdanok](https://github.com/mdanok/ArabicLT) (MIT License)
+- **Core Tables**:
+  - `synonyms (WORD, SYNO_SET)`
+  - `antonyms (WORD, ANTO_SET)`
+  - `plural (WORD, PLURAL)`
+
+When a local entry exists, it is returned instantly. If not, the fallback (LLM) can be optionally used to generate a short response.
 
 ---
 
-## Project Structure
-- **`meaning.py`** → Core agent: SQLite lookup → Tavily search → Gemini generation + cleaning. :contentReference[oaicite:8]{index=8}  
-- **`main.py`** → FastAPI app with `POST /analyze/` endpoint using `ai_agent(...)`. :contentReference[oaicite:9]{index=9}  
-- **`data.db`** → Local SQLite database (synonyms/antonyms/plurals). :contentReference[oaicite:10]{index=10}  
-- **`requirements.txt`** → Dependencies (FastAPI, Uvicorn, pandas, sqlite3, Tavily, Google Generative AI, LangChain if needed). :contentReference[oaicite:11]{index=11}
+## 🎯 Objectives
+
+- Provide **low-latency** lookups from a local database.
+- Offer an **optional fallback** (web search + Gemini API).
+- Expose a clean **REST API** for developers.
 
 ---
 
-## Analysis Overview
-### Local Lookup
-- Reads from `data.db` and returns stored result if present (splits `;` lists, trims whitespace). :contentReference[oaicite:12]{index=12}
+## 🗂️ Project Structure
 
-### Web-Assisted Fallback
-- Queries **Tavily** for concise context, then asks **Gemini** for **a single precise word** (or “لا يوجد”).  
-- Post-processes/cleans the output (remove punctuation, brackets, long phrases; restrict to ≤ 3 tokens). :contentReference[oaicite:13]{index=13}
-
-### API Layer
-- `POST /analyze/` accepts `{ "word": "...", "type": "synonyms|antonyms|plural" }` and returns `{ "source": "...", "result": ... }`. :contentReference[oaicite:14]{index=14}
-
----
-
-## Project Structure (Tree)
-```plaintext
+```
 arabic-lexical-analysis-agent/
-├─ meaning.py
-├─ main.py
-├─ data.db
-├─ requirements.txt
-└─ README.md
+├── meaning.py           # Core agent logic (lookup + optional fallback)
+├── main.py              # FastAPI app with /analyze/ endpoint
+├── data.db              # SQLite dictionary database
+├── requirements.txt     # Python dependencies
+└── README.md            # This file
+```
+
+---
+
+## ⚙️ Setup
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/<malak-hossam>/arabic-lexical-analysis-agent.git
+cd arabic-lexical-analysis-agent
+```
+
+### 2. Create and activate a virtual environment
+
+**macOS / Linux:**
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
+
+**Windows (PowerShell):**
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate
+```
+
+### 3. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Place the database file
+
+- Download `data.db` from [ArabicLT](https://github.com/mdanok/ArabicLT)
+- Put it in the root of the project (same folder as `main.py`)
+- If you move it elsewhere, update the path in `meaning.py`
+
+### 5. (Optional) Set API keys for fallback
+
+**macOS / Linux:**
+
+```bash
+export GEMINI_API_KEY="your_key_here"
+export TAVILY_API_KEY="your_key_here"
+```
+
+**Windows (PowerShell):**
+
+```powershell
+$env:GEMINI_API_KEY="your_key_here"
+$env:TAVILY_API_KEY="your_key_here"
+```
+
+---
+
+## ▶️ Running the App
+
+```bash
+uvicorn main:app --reload
+```
+
+App will be available at:
+
+```
+http://127.0.0.1:8000/
+```
+
+---
+
+## 🔌 API Usage
+
+### Endpoint
+
+```
+POST /analyze/
+```
+
+### Request Example
+
+```json
+{
+  "word": "سعيد",
+  "type": "antonyms"
+}
+```
+
+### Response Example
+
+```json
+{
+  "source": "lookup",
+  "result": "حزين"
+}
+```
+
+### Accepted `type` values:
+
+- `synonyms`
+- `antonyms`
+- `plural`
+
+### `source` field:
+
+- `"lookup"` → found in local SQLite database  
+- `"fallback"` → generated via Tavily + Gemini (optional)  
+- `"validation"` → invalid or multi-word input
+
+---
+
+## 🐳 Docker (Optional)
+
+### 1. Build the image
+
+```bash
+docker build -t arabic-lexical-analysis-agent .
+```
+
+### 2. Run the container
+
+```bash
+docker run -p 8000:8000 \
+  -e GEMINI_API_KEY="your_key" \
+  -e TAVILY_API_KEY="your_key" \
+  -v $(pwd)/data.db:/app/data.db \
+  arabic-lexical-analysis-agent
+```
+
+---
+
+## 🛡️ Configuration & Security
+
+- Never commit sensitive API keys — use `.env` or CI/CD secrets.
+- Validate all user inputs — especially `type` and `word` fields.
+- If you don’t want the fallback, you can disable Gemini/Tavily integration and rely only on local data.
+
+---
+
+## 📦 Requirements
+
+```
+fastapi
+uvicorn
+requests
+google-generativeai
+pandas
+# sqlite3 (built-in with Python)
+```
+
+---
+
+## 📝 License & Acknowledgments
+
+- The local dictionary database (`data.db`) was sourced from the [ArabicLT GitHub repository](https://github.com/mdanok/ArabicLT), licensed under the **MIT License**.
+- This repo provides attribution and does not modify the original dataset.
+- Any external APIs (Gemini, Tavily) must be used under their respective terms.
+
+---
+
+## 👤 Author
+
+**Malak Hossam**  
+AI Engineer — Natural Language Processing & Educational AI
